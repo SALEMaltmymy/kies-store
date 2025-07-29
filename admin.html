@@ -1,163 +1,84 @@
 <!DOCTYPE html>
-<html lang="ar">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>لوحة الإدارة</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f3f3f3;
-      padding: 20px;
-      max-width: 600px;
-      margin: auto;
-    }
-    form, .product-list {
-      background-color: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      margin-bottom: 30px;
-    }
-    input, textarea, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-    button {
-      background-color: #3498db;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button.delete-btn {
-      background-color: #e74c3c;
-      margin-top: 0;
-      width: auto;
-      padding: 6px 12px;
-      font-size: 14px;
-    }
-    .product-item {
-      border-bottom: 1px solid #ddd;
-      padding: 10px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .product-item:last-child {
-      border-bottom: none;
-    }
-  </style>
-</head>
-<body>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>لوحة الإدارة - متجر كيس</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 text-gray-800">
 
-  <h2 style="text-align:center">لوحة الإدارة</h2>
+    <div id="login" class="h-screen flex items-center justify-center">
+      <div class="bg-white p-6 rounded-xl shadow-md w-80">
+        <h2 class="text-xl font-bold mb-4 text-center text-indigo-700">🔐 دخول الإدارة</h2>
+        <input type="password" id="admin-pass" placeholder="ادخل الرمز" class="w-full border border-gray-300 p-2 rounded mb-4">
+        <button onclick="checkPassword()" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">دخول</button>
+        <p id="error" class="text-red-500 mt-2 text-sm text-center hidden">❌ الرمز غير صحيح</p>
+      </div>
+    </div>
 
-  <form id="productForm">
-    <input type="text" id="name" placeholder="اسم المنتج" required />
-    <input type="text" id="image" placeholder="رابط الصورة" required />
-    <textarea id="description" placeholder="وصف المنتج" required></textarea>
-    <input type="number" id="price" placeholder="السعر بالريال" required />
-    <button type="submit">إضافة منتج</button>
-  </form>
+    <div id="dashboard" class="p-6 hidden">
+      <h1 class="text-2xl font-bold mb-4 text-center text-green-700">📦 إدارة المنتجات</h1>
+      <div id="products-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+    </div>
 
-  <div class="product-list" id="productList">
-    <h3>قائمة المنتجات</h3>
-    <!-- المنتجات ستظهر هنا -->
-  </div>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+      import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+      const firebaseConfig = {
+        apiKey: "AIzaSyDC7d17QScA1olu4igkh5yhuwA4p9TwADc",
+        authDomain: "kies-store.firebaseapp.com",
+        projectId: "kies-store",
+        storageBucket: "kies-store.firebasestorage.app",
+        messagingSenderId: "1066547080126",
+        appId: "1:1066547080126:web:4f0b404675f2d4200527ef",
+        measurementId: "G-1GM6ZPV71V"
+      };
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDC7d17QScA1olu4igkh5yhuwA4p9TwADc",
-      authDomain: "kies-store.firebaseapp.com",
-      projectId: "kies-store",
-      storageBucket: "kies-store.firebasestorage.app",
-      messagingSenderId: "1066547080126",
-      appId: "1:1066547080126:web:4f0b404675f2d4200527ef",
-      measurementId: "G-1GM6ZPV71V"
-    };
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const productsCollection = collection(db, "products");
+      async function loadProducts() {
+        const container = document.getElementById("products-list");
+        container.innerHTML = "";
+        const querySnapshot = await getDocs(collection(db, "products"));
 
-    const form = document.getElementById("productForm");
-    const productList = document.getElementById("productList");
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const id = docSnap.id;
 
-    // تحميل وعرض المنتجات
-    async function loadProducts() {
-      productList.innerHTML = "<h3>قائمة المنتجات</h3>"; // تفريغ القائمة
+          const card = document.createElement("div");
+          card.className = "bg-white rounded-xl shadow p-4";
 
-      const snapshot = await getDocs(productsCollection);
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const id = docSnap.id;
+          card.innerHTML = `
+            <img src="${data.image}" alt="صورة" class="w-full h-48 object-cover rounded mb-3" />
+            <h3 class="text-lg font-semibold text-indigo-600">${data.name}</h3>
+            <p class="text-gray-600 mb-1">${data.description}</p>
+            <p class="text-green-600 font-bold mb-2">${data.price} ريال</p>
+            <button onclick="deleteProduct('${id}')" class="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600">🗑️ حذف</button>
+          `;
 
-        const item = document.createElement("div");
-        item.className = "product-item";
-
-        item.innerHTML = `
-          <div>
-            <strong>${data.name}</strong> - ${data.price} ريال
-          </div>
-          <button class="delete-btn" data-id="${id}">حذف</button>
-        `;
-
-        productList.appendChild(item);
-      });
-
-      // أضف مستمع للأزرار بعد تحميل القائمة
-      const deleteButtons = document.querySelectorAll(".delete-btn");
-      deleteButtons.forEach(button => {
-        button.addEventListener("click", async () => {
-          const docId = button.getAttribute("data-id");
-          if (confirm("هل أنت متأكد أنك تريد حذف هذا المنتج؟")) {
-            try {
-              await deleteDoc(doc(db, "products", docId));
-              alert("تم حذف المنتج بنجاح");
-              loadProducts(); // إعادة تحميل القائمة بعد الحذف
-            } catch (error) {
-              alert("خطأ أثناء الحذف: " + error.message);
-            }
-          }
+          container.appendChild(card);
         });
-      });
-    }
-
-    // إضافة منتج جديد
-    form.addEventListener("submit", async e => {
-      e.preventDefault();
-
-      const name = form.name.value.trim();
-      const image = form.image.value.trim();
-      const description = form.description.value.trim();
-      const price = parseFloat(form.price.value.trim());
-
-      if (!name || !image || !description || isNaN(price)) {
-        alert("يرجى ملء كل الحقول بشكل صحيح");
-        return;
       }
 
-      try {
-        await addDoc(productsCollection, { name, image, description, price });
-        alert("تمت إضافة المنتج بنجاح");
-        form.reset();
-        loadProducts(); // تحديث القائمة بعد الإضافة
-      } catch (error) {
-        alert("حدث خطأ أثناء الإضافة: " + error.message);
-      }
-    });
+      window.deleteProduct = async function (id) {
+        if (confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
+          await deleteDoc(doc(db, "products", id));
+          loadProducts();
+        }
+      };
 
-    loadProducts(); // تحميل المنتجات أول مرة عند فتح الصفحة
-  </script>
-
-</body>
+      window.checkPassword = function () {
+        const pass = document.getElementById("admin-pass").value;
+        if (pass === "salem506") {
+          document.getElementById("login").style.display = "none";
+          document.getElementById("dashboard").style.display = "block";
+          loadProducts();
+        } else {
+          document.getElementById("error").style.display = "block";
+        }
+      };
+    </script>
+  </body>
 </html>
