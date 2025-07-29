@@ -2,53 +2,78 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>إضافة منتج</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>لوحة الإدارة</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f3f3f3;
+      background-color: #f3f3f3;
       padding: 20px;
+      max-width: 600px;
+      margin: auto;
     }
-    form {
-      background: #fff;
+    form, .product-list {
+      background-color: #fff;
       padding: 20px;
       border-radius: 8px;
-      max-width: 400px;
-      margin: auto;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
     }
-    input, textarea {
+    input, textarea, button {
       width: 100%;
-      margin: 10px 0;
       padding: 10px;
+      margin-top: 10px;
       border-radius: 6px;
       border: 1px solid #ccc;
+      font-size: 16px;
+      box-sizing: border-box;
     }
     button {
-      background: #007bff;
+      background-color: #3498db;
       color: white;
       border: none;
-      padding: 10px 15px;
-      border-radius: 6px;
       cursor: pointer;
+      font-weight: bold;
+    }
+    button.delete-btn {
+      background-color: #e74c3c;
+      margin-top: 0;
+      width: auto;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+    .product-item {
+      border-bottom: 1px solid #ddd;
+      padding: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .product-item:last-child {
+      border-bottom: none;
     }
   </style>
 </head>
 <body>
 
-  <h1 style="text-align:center">إضافة منتج جديد</h1>
+  <h2 style="text-align:center">لوحة الإدارة</h2>
+
   <form id="productForm">
     <input type="text" id="name" placeholder="اسم المنتج" required />
     <input type="text" id="image" placeholder="رابط الصورة" required />
     <textarea id="description" placeholder="وصف المنتج" required></textarea>
     <input type="number" id="price" placeholder="السعر بالريال" required />
-    <button type="submit">إضافة</button>
+    <button type="submit">إضافة منتج</button>
   </form>
+
+  <div class="product-list" id="productList">
+    <h3>قائمة المنتجات</h3>
+    <!-- المنتجات ستظهر هنا -->
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDC7d17QScA1olu4igkh5yhuwA4p9TwADc",
@@ -62,28 +87,77 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const productsCollection = collection(db, "products");
 
-    const form = document.getElementById('productForm');
-    form.addEventListener('submit', async (e) => {
+    const form = document.getElementById("productForm");
+    const productList = document.getElementById("productList");
+
+    // تحميل وعرض المنتجات
+    async function loadProducts() {
+      productList.innerHTML = "<h3>قائمة المنتجات</h3>"; // تفريغ القائمة
+
+      const snapshot = await getDocs(productsCollection);
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const id = docSnap.id;
+
+        const item = document.createElement("div");
+        item.className = "product-item";
+
+        item.innerHTML = `
+          <div>
+            <strong>${data.name}</strong> - ${data.price} ريال
+          </div>
+          <button class="delete-btn" data-id="${id}">حذف</button>
+        `;
+
+        productList.appendChild(item);
+      });
+
+      // أضف مستمع للأزرار بعد تحميل القائمة
+      const deleteButtons = document.querySelectorAll(".delete-btn");
+      deleteButtons.forEach(button => {
+        button.addEventListener("click", async () => {
+          const docId = button.getAttribute("data-id");
+          if (confirm("هل أنت متأكد أنك تريد حذف هذا المنتج؟")) {
+            try {
+              await deleteDoc(doc(db, "products", docId));
+              alert("تم حذف المنتج بنجاح");
+              loadProducts(); // إعادة تحميل القائمة بعد الحذف
+            } catch (error) {
+              alert("خطأ أثناء الحذف: " + error.message);
+            }
+          }
+        });
+      });
+    }
+
+    // إضافة منتج جديد
+    form.addEventListener("submit", async e => {
       e.preventDefault();
-      const name = document.getElementById('name').value;
-      const image = document.getElementById('image').value;
-      const description = document.getElementById('description').value;
-      const price = parseFloat(document.getElementById('price').value);
+
+      const name = form.name.value.trim();
+      const image = form.image.value.trim();
+      const description = form.description.value.trim();
+      const price = parseFloat(form.price.value.trim());
+
+      if (!name || !image || !description || isNaN(price)) {
+        alert("يرجى ملء كل الحقول بشكل صحيح");
+        return;
+      }
 
       try {
-        await addDoc(collection(db, "products"), {
-          name,
-          image,
-          description,
-          price
-        });
-        alert("تم إضافة المنتج بنجاح!");
+        await addDoc(productsCollection, { name, image, description, price });
+        alert("تمت إضافة المنتج بنجاح");
         form.reset();
+        loadProducts(); // تحديث القائمة بعد الإضافة
       } catch (error) {
-        alert("حدث خطأ: " + error.message);
+        alert("حدث خطأ أثناء الإضافة: " + error.message);
       }
     });
+
+    loadProducts(); // تحميل المنتجات أول مرة عند فتح الصفحة
   </script>
+
 </body>
 </html>
