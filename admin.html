@@ -1,11 +1,54 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <title>لوحة الإدارة - KIES STORE</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إضافة منتج</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f3f3;
+      padding: 20px;
+    }
+    form {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 400px;
+      margin: auto;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    input, textarea {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1 style="text-align:center">إضافة منتج جديد</h1>
+  <form id="productForm">
+    <input type="text" id="name" placeholder="اسم المنتج" required />
+    <input type="text" id="image" placeholder="رابط الصورة" required />
+    <textarea id="description" placeholder="وصف المنتج" required></textarea>
+    <input type="number" id="price" placeholder="السعر بالريال" required />
+    <button type="submit">إضافة</button>
+  </form>
+
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDC7d17QScA1olu4igkh5yhuwA4p9TwADc",
@@ -20,75 +63,27 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const form = document.getElementById("addForm");
-    const loading = document.getElementById("loading");
-    const statusMsg = document.getElementById("status");
-
-    form.onsubmit = async (e) => {
+    const form = document.getElementById('productForm');
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      statusMsg.textContent = '';
-      loading.style.display = 'inline-block';
-
-      const name = document.getElementById("name").value;
-      const price = parseFloat(document.getElementById("price").value);
-      const image = document.getElementById("image").value;
-
-      if (!name || !price || !image) {
-        loading.style.display = 'none';
-        statusMsg.textContent = '❌ يرجى تعبئة كل الحقول';
-        statusMsg.style.color = 'red';
-        return;
-      }
+      const name = document.getElementById('name').value;
+      const image = document.getElementById('image').value;
+      const description = document.getElementById('description').value;
+      const price = parseFloat(document.getElementById('price').value);
 
       try {
-        await addDoc(collection(db, "products"), { name, price, image });
-        statusMsg.textContent = '✅ تمت الإضافة بنجاح!';
-        statusMsg.style.color = 'green';
+        await addDoc(collection(db, "products"), {
+          name,
+          image,
+          description,
+          price
+        });
+        alert("تم إضافة المنتج بنجاح!");
         form.reset();
-      } catch (err) {
-        statusMsg.textContent = '❌ حدث خطأ أثناء الإضافة';
-        statusMsg.style.color = 'red';
-        console.error(err);
+      } catch (error) {
+        alert("حدث خطأ: " + error.message);
       }
-
-      loading.style.display = 'none';
-    };
+    });
   </script>
-
-  <style>
-    body { font-family: sans-serif; text-align: center; padding: 30px; background: #f0f0f0; }
-    form { background: white; padding: 20px; display: inline-block; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    input { display: block; margin: 10px auto; padding: 10px; width: 250px; border-radius: 5px; border: 1px solid #ccc; }
-    button { padding: 10px 20px; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
-    button:hover { background: #0056b3; }
-    #loading {
-      display: none;
-      width: 24px;
-      height: 24px;
-      border: 4px solid #ccc;
-      border-top-color: #007bff;
-      border-radius: 50%;
-      margin: 10px auto;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    #status {
-      font-weight: bold;
-      margin-top: 10px;
-    }
-  </style>
-</head>
-<body>
-  <h1>لوحة التحكم - إضافة منتج</h1>
-  <form id="addForm">
-    <input type="text" id="name" placeholder="اسم المنتج" required />
-    <input type="number" id="price" placeholder="السعر" required />
-    <input type="text" id="image" placeholder="رابط الصورة" required />
-    <button type="submit">إضافة المنتج</button>
-    <div id="loading"></div>
-    <div id="status"></div>
-  </form>
 </body>
 </html>
